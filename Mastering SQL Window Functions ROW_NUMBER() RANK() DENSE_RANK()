@@ -1,0 +1,63 @@
+# 📊 Mastering SQL Window Functions: `ROW_NUMBER()` vs `RANK()` vs `DENSE_RANK()`
+
+When writing advanced SQL queries for relational databases (like SSMS) or distributed Big Data systems (like Spark SQL), standard arithmetic isn't enough. You need **Window Functions** to perform deep analytical calculations across rows.
+
+Here is a practical breakdown of how SQL handles rankings and duplicates under the hood.
+
+---
+
+## 💡 The Core Difference
+
+* **`ROW_NUMBER()`**: Assigns a sequential, unique integer to each row. It never repeats and never skips.
+* **`RANK()`**: Assigns the same rank to identical values (ties). However, it **skips** the next sequential numbers based on how many duplicates existed.
+* **`DENSE_RANK()`**: Assigns the same rank to identical values (ties), but it **never skips** any numbers. The next rank is always the immediate next integer.
+
+---
+
+## 💻 Practice Script (SQL Server / SSMS Compatible)
+
+You can copy and run this query directly inside SQL Server Management Studio (SSMS) without creating a physical table:
+
+```sql
+-- Step 1: Create a mock dataset using a CTE
+WITH EmployeeData AS (
+    SELECT 'Ali' AS Name, 70000 AS Salary UNION ALL
+    SELECT 'Bilal', 60000 UNION ALL
+    SELECT 'Hamza', 60000 UNION ALL -- Duplicate/Tie Salary
+    SELECT 'Zain', 50000
+)
+-- Step 2: Apply the Window Functions
+SELECT 
+    Name,
+    Salary,
+    ROW_NUMBER() OVER (ORDER BY Salary DESC) AS [Row_Number],
+    RANK() OVER (ORDER BY Salary DESC) AS [Rank],
+    DENSE_RANK() OVER (ORDER BY Salary DESC) AS [Dense_Rank]
+FROM 
+    EmployeeData;
+```
+
+---
+
+## 📊 The Execution Output
+
+When you execute the query above, here is exactly how the system outputs the rankings:
+
+| Name | Salary | Row_Number | Rank | Dense_Rank | What Happened? |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Ali** | 70,000 | **1** | **1** | **1** | Highest salary gets top priority across all functions. |
+| **Bilal** | 60,000 | **2** | **2** | **2** | Second highest position. |
+| **Hamza** | 60,000 | **3** | **2** | **2** | **The Tie:** `RANK` and `DENSE_RANK` match Bilal. `ROW_NUMBER` stays sequential. |
+| **Zain** | 50,000 | **4** | **4** | **3** | **The Twist:** `RANK` skipped number 3 because of the tie. `DENSE_RANK` strictly continued with 3. |
+
+---
+
+## 🛠️ Real-World Use Cases
+
+1. **Use `ROW_NUMBER()` when:** You need clean pagination for website views or you want to isolate and delete exact duplicate rows from a messy dataset.
+2. **Use `RANK()` when:** You are designing a standard sports leaderboard where tied players share a position, but the next rank reflects the actual count of players ahead.
+3. **Use `DENSE_RANK()` when:** You want a continuous leaderboard (e.g., finding the top 3 highest-earning brackets in a company), ensuring no numeric ranking positions are missing.
+
+---
+
+💬 **SQL Engineering Tip:** Window functions use the `OVER()` clause to define their scope without collapsing rows like a traditional `GROUP BY` clause does!
